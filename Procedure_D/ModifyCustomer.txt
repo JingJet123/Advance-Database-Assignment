@@ -1,0 +1,53 @@
+CREATE OR REPLACE PROCEDURE ModifyCustomer(
+  p_CustomerID        IN  Customer.CustomerID%TYPE,
+  p_CustomerName      IN  Customer.CustomerName%TYPE,
+  p_CustomerPwd       IN  Customer.CustomerPwd%TYPE,
+  p_CustomerEmail     IN  Customer.CustomerEmail%TYPE,
+  p_CustomerPhoneNo   IN  Customer.CustomerPhoneNo%TYPE,
+  p_CustomerAddress   IN  Customer.CustomerAddress%TYPE,
+  p_CustomerNewPwd    IN  Customer.CustomerPwd%TYPE DEFAULT NULL
+) IS
+  v_count NUMBER;
+BEGIN
+  -- insert or update customer
+  IF p_CustomerID IS NULL THEN
+    INSERT INTO Customer (
+      CustomerID,
+      CustomerName,
+      CustomerPwd,
+      CustomerEmail,
+      CustomerPhoneNo,
+      CustomerAddress
+    ) VALUES (
+      'C' || TO_CHAR(CustomerID_seq.nextval,'FM0000'),
+      p_CustomerName,
+      p_CustomerPwd,
+      p_CustomerEmail,
+      p_CustomerPhoneNo,
+      p_CustomerAddress
+    );
+  ELSE
+     -- check if customer exists
+     SELECT COUNT(*) INTO v_count
+     FROM Customer
+     WHERE CustomerID = p_CustomerID AND CustomerPwd = p_CustomerPwd;
+
+    IF v_count = 0 THEN
+       DBMS_OUTPUT.PUT_LINE('Customer does not exist.');
+       RETURN;
+    END IF;
+
+    UPDATE Customer
+    SET CustomerName = p_CustomerName,
+        CustomerPwd = COALESCE(p_CustomerNewPwd, CustomerPwd), -- if p_NewPassword is not provided, keep the current password
+        CustomerEmail = p_CustomerEmail,
+        CustomerPhoneNo = p_CustomerPhoneNo,
+        CustomerAddress = p_CustomerAddress
+    WHERE CustomerID = p_CustomerID;
+  END IF;
+
+  DBMS_OUTPUT.PUT_LINE('Customer successfully modified.');
+END;
+/
+
+exec ModifyCustomer(null,'Ahmad Ali', 'AbAa3456!', 'ahmadAli@gmail.com', '012-3456789', '123 Jalan Raja')

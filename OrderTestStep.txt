@@ -1,0 +1,12 @@
+DECLARE
+   products SYS.ODCIVARCHAR2LIST := SYS.ODCIVARCHAR2LIST('P0001', 'P0002', 'P0003');
+   quantities SYS.ODCINUMBERLIST := SYS.ODCINUMBERLIST(2, 1, 3);
+   discount_id Discount.DiscountID%TYPE := 'DC0001';
+BEGIN
+   PlaceOrder('C0001', products, quantities, discount_id);
+END;
+/
+
+exec prc_ApprovePayment('O0204','E-Wallet')
+
+UPDATE Orders SET OrderStatus = 'Completed' WHERE OrderID = 'O0204';

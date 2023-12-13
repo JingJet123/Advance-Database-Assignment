@@ -1,0 +1,20 @@
+CREATE OR REPLACE TRIGGER upd_QuantityInStock_trigger
+AFTER INSERT OR UPDATE ON OrderDetail
+FOR EACH ROW
+
+DECLARE
+  v_stock Product.Stock%TYPE;
+
+BEGIN
+
+  SELECT Stock INTO v_stock FROM Product WHERE ProductID = :NEW.ProductID;
+
+  IF v_stock - :NEW.ProductQuantity < 0 THEN
+    RAISE_APPLICATION_ERROR(-20001, 'Not enough stock for product');
+  END IF;
+
+  UPDATE Product
+  SET Stock = Stock - :NEW.ProductQuantity
+  WHERE ProductID = :NEW.ProductID;
+END;
+/

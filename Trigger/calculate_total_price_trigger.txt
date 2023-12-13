@@ -1,0 +1,37 @@
+CREATE OR REPLACE TRIGGER calculate_order_totals
+BEFORE INSERT ON OrderDetail
+FOR EACH ROW
+DECLARE
+  p_weight Product.ProductWeight%TYPE;
+  p_price Product.ProductPrice%TYPE;
+  total_weight Orders.TotalWeight%TYPE;
+  total_price Orders.TotalPrice%TYPE;
+BEGIN
+  SELECT ProductWeight, ProductPrice 
+  INTO p_weight, p_price
+  FROM Product
+  WHERE ProductID = :NEW.ProductID;
+  
+  SELECT TotalWeight, TotalPrice
+  INTO total_weight, total_price
+  FROM Orders
+  WHERE OrderID = :NEW.OrderID;
+
+  IF total_weight is null THEN total_weight := 0;END IF;
+  IF total_price is null THEN total_price := 0;END IF;
+  
+  total_weight := total_weight + :NEW.ProductQuantity * p_weight;
+  total_price := total_price + :NEW.ProductQuantity * p_price;
+  
+  DBMS_OUTPUT.PUT_LINE('p_weight: ' || p_weight);
+  DBMS_OUTPUT.PUT_LINE('p_price: ' || p_price);
+  DBMS_OUTPUT.PUT_LINE('total_weight: ' || total_weight);
+  DBMS_OUTPUT.PUT_LINE('total_price: ' || total_price);
+
+  UPDATE Orders
+  SET TotalWeight = total_weight, TotalPrice = total_price
+  WHERE OrderID = :NEW.OrderID;
+
+  DBMS_OUTPUT.PUT_LINE(total_price);
+END;
+/

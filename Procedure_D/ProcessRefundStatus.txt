@@ -1,0 +1,31 @@
+CREATE OR REPLACE PROCEDURE ProcessRefundStatus (
+    p_RefundID IN Refund.RefundID%TYPE,
+    p_Status IN VARCHAR2
+)
+IS
+    VAR_RefundCount NUMBER(10);
+    VAR_RefundStatus VARCHAR2(15);
+BEGIN
+    SELECT COUNT(*) INTO VAR_RefundCount FROM Refund WHERE RefundID = p_RefundID;
+    
+    IF VAR_RefundCount = 0 THEN
+        DBMS_OUTPUT.PUT_LINE('Refund ID does not exist.');
+        RETURN;
+    END IF;
+    
+    SELECT RefundStatus INTO VAR_RefundStatus FROM Refund WHERE RefundID = p_RefundID;
+    
+    IF VAR_RefundStatus <> 'Pending' THEN
+        DBMS_OUTPUT.PUT_LINE('Refund status is not Pending.');
+        RETURN;
+    END IF;
+    
+    UPDATE Refund SET RefundStatus = CASE p_Status
+                                         WHEN 'A' THEN 'Approved'
+                                         WHEN 'R' THEN 'Rejected'
+                                     END
+                     WHERE RefundID = p_RefundID;
+                     
+    DBMS_OUTPUT.PUT_LINE('Refund status has been updated successfully.');
+END;
+/

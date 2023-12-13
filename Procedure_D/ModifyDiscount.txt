@@ -1,0 +1,50 @@
+CREATE OR REPLACE PROCEDURE ModifyDiscount(
+  p_DiscountID         IN  Discount.DiscountID%TYPE,
+  p_DiscountName       IN  Discount.DiscountName%TYPE,
+  p_DiscountStatus     IN  Discount.DiscountStatus%TYPE,
+  p_MinimumSpent       IN  Discount.MinimumSpent%TYPE,
+  p_DiscountPercentage IN  Discount.DiscountPercentage%TYPE,
+  p_MaximumCap         IN  Discount.MaximumCap%TYPE
+) IS
+  v_count NUMBER;
+BEGIN
+  -- insert or update discount
+  IF p_DiscountID IS NULL THEN
+    INSERT INTO Discount (
+      DiscountID,
+      DiscountName,
+      DiscountStatus,
+      MinimumSpent,
+      DiscountPercentage,
+      MaximumCap
+    ) VALUES (
+      'DC' || TO_CHAR(DiscountID_seq.NEXTVAL, 'FM0000'),
+      p_DiscountName,
+      p_DiscountStatus,
+      p_MinimumSpent,
+      p_DiscountPercentage,
+      p_MaximumCap
+    );
+  ELSE
+     -- check if discount exists
+     SELECT COUNT(*) INTO v_count
+     FROM Discount
+     WHERE DiscountID = p_DiscountID;
+
+    IF v_count = 0 THEN
+       DBMS_OUTPUT.PUT_LINE('Discount does not exist.');
+       RETURN;
+    END IF;
+
+    UPDATE Discount
+    SET DiscountName = p_DiscountName,
+        DiscountStatus = p_DiscountStatus,
+        MinimumSpent = p_MinimumSpent,
+        DiscountPercentage = p_DiscountPercentage,
+        MaximumCap = p_MaximumCap
+    WHERE DiscountID = p_DiscountID;
+  END IF;
+
+  DBMS_OUTPUT.PUT_LINE('Discount successfully modified.');
+END;
+/

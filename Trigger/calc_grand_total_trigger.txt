@@ -1,0 +1,54 @@
+CREATE OR REPLACE TRIGGER calc_grand_total_trigger
+BEFORE UPDATE ON Orders
+FOR EACH ROW
+
+DECLARE
+    v_grand_total Payment.GrandTotal%TYPE;
+    sst_charge NUMBER(7,2);
+    delivery_charge Delivery.DeliveryCharge%TYPE;
+    v_minimum_spent Discount.MinimumSpent%TYPE;
+    v_discount_percentage Discount.DiscountPercentage%TYPE;
+    v_maximum_cap Discount.MaximumCap%TYPE;
+    v_discount_amount Orders.DiscountAmount%TYPE;
+    v_totalPrice Orders.TotalPrice%TYPE;
+
+BEGIN
+    -- Get the delivery charge based on the total weight of the order
+    IF :OLD.TotalWeight BETWEEN 0 AND 5 THEN
+        delivery_charge := 7;
+    ELSIF :OLD.TotalWeight BETWEEN 5.1 AND 10 THEN
+        delivery_charge := 10;
+    ELSIF :OLD.TotalWeight BETWEEN 10.1 AND 20 THEN
+        delivery_charge := 13;
+    ELSIF :OLD.TotalWeight BETWEEN 20.1 AND 30 THEN
+        delivery_charge := 16;
+    ELSE
+        delivery_charge := 20;
+    END IF;
+
+    v_discount_amount := :OLD.DiscountAmount;
+
+    -- Calculate the SST charge based on the total price
+    sst_charge := :OLD.TotalPrice * 0.06;
+
+    -- Calculate the Grand Total
+    v_grand_total := :NEW.TotalPrice + sst_charge + delivery_charge - v_discount_amount;
+    
+    -- Raise an error if the Grand Total is negative
+    IF v_grand_total < 0 THEN
+        RAISE_APPLICATION_ERROR(-20001, 'Grand Total cannot be negative.');
+    END IF;
+    
+    DBMS_OUTPUT.PUT_LINE('Grand Total :' || v_grand_total);
+
+    -- Update the Payment table with the Grand Total
+    UPDATE Payment
+    SET GrandTotal = v_grand_total
+    WHERE PaymentID = :OLD.PaymentID;
+
+    -- Update the Delivery table with the delivery charge
+    UPDATE Delivery
+    SET DeliveryCharge = delivery_charge
+    WHERE DeliveryID = :OLD.DeliveryID;
+END;
+/

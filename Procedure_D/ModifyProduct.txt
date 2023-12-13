@@ -1,0 +1,50 @@
+CREATE OR REPLACE PROCEDURE ModifyProduct(
+  p_ProductID      IN  Product.ProductID%TYPE,
+  p_ProductName    IN  Product.ProductName%TYPE,
+  p_ProductPrice   IN  Product.ProductPrice%TYPE,
+  p_Stock          IN  Product.Stock%TYPE,
+  p_ProductWeight  IN  Product.ProductWeight%TYPE,
+  p_Category       IN  Product.Category%TYPE
+) IS
+  v_count NUMBER;
+BEGIN
+  -- insert or update product
+  IF p_ProductID IS NULL THEN
+    INSERT INTO Product (
+      ProductID,
+      ProductName,
+      ProductPrice,
+      Stock,
+      ProductWeight,
+      Category
+    ) VALUES (
+      'PR' || TO_CHAR(ProductID_seq.NEXTVAL, 'FM0000'),
+      p_ProductName,
+      p_ProductPrice,
+      p_Stock,
+      p_ProductWeight,
+      p_Category
+    );
+  ELSE
+    -- check if product exists
+    SELECT COUNT(*) INTO v_count
+    FROM Product
+    WHERE ProductID = p_ProductID;
+
+    IF v_count = 0 THEN
+       DBMS_OUTPUT.PUT_LINE('Product does not exist.');
+       RETURN;
+    END IF;
+
+    UPDATE Product
+    SET ProductName = p_ProductName,
+        ProductPrice = p_ProductPrice,
+        Stock = p_Stock,
+        ProductWeight = p_ProductWeight,
+        Category = p_Category
+    WHERE ProductID = p_ProductID;
+  END IF;
+
+  DBMS_OUTPUT.PUT_LINE('Product successfully modified.');
+END;
+/

@@ -1,0 +1,43 @@
+CREATE OR REPLACE PROCEDURE insert_review (
+    p_ProductID IN OrderDetail.ProductID%TYPE,
+    p_CustomerRating IN Review.CustomerRating%TYPE,
+    p_CustomerComment IN Review.CustomerComment%TYPE,
+    p_CustomerID IN Review.CustomerID%TYPE
+) IS
+    v_OrderDetailCount NUMBER;
+    v_OrderID OrderDetail.OrderID%TYPE;
+BEGIN
+    -- Check if the customer ordered the product
+    SELECT COUNT(*), MAX(OrderID) INTO v_OrderDetailCount, v_OrderID FROM OrderDetail
+    WHERE ProductID = p_ProductID AND OrderID IN (
+       SELECT OrderID FROM Orders WHERE CustomerID = p_CustomerID
+    ) GROUP BY OrderID;
+
+    
+    IF v_OrderDetailCount = 0 THEN
+        DBMS_OUTPUT.PUT_LINE('You have not ordered this product yet.');
+    ELSE
+        -- Insert new review as the orderdetail's review foreign key
+        INSERT INTO Review (
+            ReviewID, CustomerRating, CustomerComment, DateCreated, CustomerID
+        ) VALUES (
+            'R' || TO_CHAR(reviewId_seq.nextval,'FM0000'), p_CustomerRating, p_CustomerComment, SYSDATE, p_CustomerID
+        );
+        
+        FOR o IN (SELECT * FROM Orders WHERE CustomerID = p_CustomerID) LOOP
+            UPDATE OrderDetail SET ReviewID = 'R' || TO_CHAR(reviewId_seq.currval,'FM0000')
+            WHERE OrderID = o.OrderID AND ProductID = p_ProductID;
+        END LOOP;
+        
+        DBMS_OUTPUT.PUT_LINE('Review added successfully.');
+    END IF;
+    
+    COMMIT;
+EXCEPTION
+    WHEN OTHERS THEN
+        DBMS_OUTPUT.PUT_LINE('Error occurred: ' || SQLERRM);
+        ROLLBACK;
+END;
+/
+
+exec insert_review('P0129',5,'I Like It','C0005')

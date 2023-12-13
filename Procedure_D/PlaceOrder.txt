@@ -1,0 +1,130 @@
+CREATE OR REPLACE PROCEDURE PlaceOrder(
+p_CustomerID IN Customer.CustomerID%TYPE,
+p_Products IN SYS.ODCIVARCHAR2LIST,
+p_Quantities IN SYS.ODCINUMBERLIST,
+p_DiscountID IN Discount.DiscountID%TYPE
+) IS
+v_order_id VARCHAR2(10);
+v_total_weight NUMBER(5,2) := 0;
+v_total_price NUMBER(9,2) := 0;
+--Discount
+v_discount_amount NUMBER(5,2) := 0;
+v_discount_percentage NUMBER(3,2) := 0;
+v_discount_minSpent NUMBER(5,2) := 0;
+v_discount_maxCap NUMBER(4,2) := 0;
+v_discount_stats VARCHAR(15) := 0;
+--Payment
+v_paymentID Payment.PaymentID%TYPE;
+--Delivery
+v_deliveryID Delivery.DeliveryID%TYPE;
+--Product 
+v_product_name Product.ProductName%TYPE;
+v_product_stock Product.Stock%TYPE;
+v_product_weight NUMBER(5,2) := 101;
+v_product_price NUMBER(9,2) := 101; 
+BEGIN
+-- get order id
+SELECT 'O' || TO_CHAR(OrderID_seq.nextval,'FM0000')
+INTO v_order_id
+FROM dual;
+
+-- calculate total weight, price and update Stock
+FOR i IN 1..p_Products.COUNT LOOP
+SELECT ProductName, ProductWeight, ProductPrice, Stock
+INTO v_product_name, v_product_weight, v_product_price, v_product_stock
+FROM Product
+WHERE ProductID = p_Products(i);
+
+--SUMing Weight and Price
+v_total_weight := v_total_weight + (v_product_weight * p_Quantities(i));
+v_total_price := v_total_price + (v_product_price * p_Quantities(i));
+DBMS_OUTPUT.PUT_LINE(i || '.' || v_product_name || '=' || v_product_price * p_Quantities(i));
+
+IF v_product_stock >= p_Quantities(i) THEN
+  UPDATE Product SET Stock = v_product_stock - p_Quantities(i) WHERE ProductID = p_Products(i);
+ELSE
+  RAISE_APPLICATION_ERROR(-20001, 'Insufficient v_product_stock for product ' || p_Products(i));
+END IF;
+
+END LOOP;
+
+DBMS_OUTPUT.PUT_LINE('Total Price :' || v_total_price);
+
+SELECT DiscountStatus, DiscountPercentage, MinimumSpent, MaximumCap
+INTO v_discount_stats, v_discount_percentage, v_discount_minSpent, v_discount_maxCap
+FROM Discount
+WHERE DiscountID = p_DiscountID;
+
+IF v_discount_stats = 'Available' AND v_total_price >= v_discount_minSpent THEN
+  v_discount_amount := v_total_price * v_discount_percentage;
+  IF v_discount_amount > v_discount_maxCap THEN
+    v_discount_amount := v_discount_maxCap;
+  END IF;
+  DBMS_OUTPUT.PUT_LINE('Discount Amount:' || v_discount_amount);
+ELSE
+  RAISE_APPLICATION_ERROR(-20001, 'Minimum Spent Not Reach : Rm' || v_discount_minSpent);
+END IF;
+
+DBMS_OUTPUT.PUT_LINE('Total Price after discount :' || (v_total_price - v_discount_amount));
+
+--INSERT 
+v_deliveryID := 'D' || TO_CHAR(deliveryId_seq.nextval,'FM0000');
+v_paymentID := 'PA' || TO_CHAR(paymentId_seq.nextval,'FM0000');
+
+--INSERT PAYMENT
+insert into Payment  values (v_paymentID, 0,null, null);
+
+--INSERT DELIVERY
+insert into Delivery  values (v_deliveryID, 'Pending', null, null, null);
+
+
+
+-- insert order
+INSERT INTO Orders (
+OrderID,
+OrderDate,
+OrderStatus,
+TotalWeight,
+TotalPrice,
+DiscountAmount,
+CustomerID,
+DiscountID,
+PaymentID,
+DeliveryID,
+RefundID
+) VALUES (
+v_order_id,
+SYSDATE,
+'Pending',
+null, --v_total_weight,
+null, --v_total_price,
+null,
+p_CustomerID,
+p_DiscountID,
+v_PaymentID,
+v_deliveryID,
+null
+);
+
+FOR i IN 1..p_Products.COUNT LOOP
+SELECT ProductName, ProductWeight, ProductPrice, Stock
+INTO v_product_name, v_product_weight, v_product_price, v_product_stock
+FROM Product
+WHERE ProductID = p_Products(i);
+
+INSERT INTO OrderDetail VALUES (v_order_id, p_Products(i), p_Quantities(i), p_Quantities(i) * v_product_price, null);
+END LOOP;
+
+DBMS_OUTPUT.PUT_LINE('Order successfully placed.');
+
+EXCEPTION
+    WHEN OTHERS THEN
+	-- SQLERRM: returns the error message associated with its error-number argument
+	DBMS_OUTPUT.PUT_LINE('ORDER FAILED');
+        DBMS_OUTPUT.PUT_LINE('Error occurred: ' || SQLERRM);
+	--Rollback: revert all things before procedure
+        ROLLBACK;
+
+END;
+/
+

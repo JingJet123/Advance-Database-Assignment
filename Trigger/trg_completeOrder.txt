@@ -1,0 +1,12 @@
+CREATE OR REPLACE TRIGGER trg_orderStat
+AFTER UPDATE ON Orders
+FOR EACH ROW
+BEGIN
+  IF :NEW.OrderStatus = 'Completed'
+  THEN 
+    UPDATE Delivery 
+    SET DeliveryStatus = 'Delivered', ArrivedDate = SYSDATE
+    WHERE DeliveryID = :OLD.DeliveryID;
+  END IF;
+END;
+/

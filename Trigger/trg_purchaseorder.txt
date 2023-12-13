@@ -1,0 +1,25 @@
+CREATE OR REPLACE TRIGGER update_purchase_order
+BEFORE INSERT OR UPDATE ON PurchaseOrder
+FOR EACH ROW
+DECLARE
+    total_price NUMBER(9,2);
+BEGIN
+    -- Check Quantity
+    IF :NEW.Quantity < 1 OR :NEW.Quantity > 100 THEN
+        raise_application_error(-20001, 'Quantity must be between 1 and 100.');
+    END IF;
+    
+    -- Calculate TotalPrice
+    total_price := :NEW.Quantity * :NEW.UnitPrice;
+    :NEW.TotalPrice := total_price;
+    
+    -- Update Product Stock
+    UPDATE Product
+    SET Stock = Stock + :NEW.Quantity
+    WHERE ProductID = :NEW.ProductID;
+    
+END;
+/
+
+insert into PurchaseOrder 
+values ('PO' || TO_CHAR(purchaseOrderId_seq.nextval,'FM0000'), 'P0113', 'SP0008', 43, '03-12-2022', 24, null);

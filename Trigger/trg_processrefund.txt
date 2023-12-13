@@ -1,0 +1,41 @@
+CREATE OR REPLACE TRIGGER SetRefundInfo
+BEFORE INSERT ON Refund
+FOR EACH ROW
+DECLARE
+    
+BEGIN
+    --:NEW.RefundID := 'RF' || TO_CHAR(refundId_seq.nextval,'FM0000');
+    IF :NEW.RefundAmount <= 0 THEN
+        RAISE_APPLICATION_ERROR(-20001, 'Invalid Refund Amount');
+    END IF;
+
+    IF :NEW.RefundReason IS NULL THEN
+        RAISE_APPLICATION_ERROR(-20002, 'Refund Reason cannot be null');
+    END IF;
+
+    :NEW.RefundDate := SYSDATE;
+    :NEW.RefundStatus := 'Pending';
+END;
+/
+
+CREATE OR REPLACE PROCEDURE prc_requestrefund (
+   p_refundOrder Orders.OrderID%TYPE
+)
+IS
+   v_refundID Refund.RefundID%TYPE := 'RF' || TO_CHAR(refundId_seq.nextval,'FM0000');
+   v_refundAmt Refund.RefundAmount%TYPE;
+BEGIN
+   SELECT TotalPrice INTO v_refundAmt
+   FROM Orders
+   WHERE Orders.OrderID = p_refundOrder;
+   
+   INSERT INTO Refund 
+   VALUES(v_refundID, null, v_refundAmt, 'The Dino leg is broken','Pending');
+   
+   UPDATE Orders
+   SET RefundID = v_refundID
+   WHERE OrderID = p_refundOrder;
+END;
+/
+
+

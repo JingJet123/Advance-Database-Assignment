@@ -1,0 +1,17 @@
+CREATE OR REPLACE TRIGGER CheckReview
+BEFORE INSERT ON Review
+FOR EACH ROW
+DECLARE
+BEGIN
+    
+    IF :NEW.CustomerRating < 1 OR :NEW.CustomerRating > 5 THEN
+        RAISE_APPLICATION_ERROR(-20002, 'Rating should be between 1 and 5');
+    END IF;
+    
+    IF :NEW.CustomerComment IS NULL THEN
+        RAISE_APPLICATION_ERROR(-20003, 'Comment cannot be null');
+    END IF;
+    
+    :NEW.DateCreated := SYSDATE;
+END;
+/

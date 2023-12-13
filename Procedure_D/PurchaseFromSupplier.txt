@@ -1,0 +1,42 @@
+CREATE OR REPLACE PROCEDURE prc_PurchaseFromSupplier (
+    p_ProductID IN VARCHAR2,
+    p_SupplierID IN VARCHAR2,
+    p_Quantity IN NUMBER,
+    p_UnitPrice IN NUMBER
+) IS
+    v_TotalPrice PurchaseOrder.TotalPrice%TYPE;
+    v_CurrentDate PurchaseOrder.SupplierOrderDate%TYPE := SYSDATE;
+BEGIN
+    v_TotalPrice := p_UnitPrice * p_Quantity;
+    
+    INSERT INTO PurchaseOrder (
+        PurchaseOrderID, 
+        ProductID,
+        SupplierID,
+        Quantity,
+        SupplierOrderDate,
+        UnitPrice,
+        TotalPrice
+    ) VALUES (
+        'PO' || TO_CHAR(purchaseOrderId_seq.nextval,'FM0000'),
+        p_ProductID,
+        p_SupplierID,
+        p_Quantity,
+        v_CurrentDate,
+        p_UnitPrice,
+        v_TotalPrice
+    );
+    
+    DBMS_OUTPUT.PUT_LINE('Purchase Order has been created.');
+    DBMS_OUTPUT.PUT_LINE('Order Number: ' || 'PO' || TO_CHAR(purchaseOrderId_seq.currval,'FM0000'));
+    DBMS_OUTPUT.PUT_LINE('Product ID: ' || p_ProductID);
+    DBMS_OUTPUT.PUT_LINE('Supplier ID: ' || p_SupplierID);
+    DBMS_OUTPUT.PUT_LINE('Quantity: ' || p_Quantity);
+    DBMS_OUTPUT.PUT_LINE('Unit Price: ' || p_UnitPrice);
+    DBMS_OUTPUT.PUT_LINE('Total Price: ' || v_TotalPrice);
+    DBMS_OUTPUT.PUT_LINE('Order Date: ' || v_CurrentDate);
+EXCEPTION
+    WHEN OTHERS THEN
+        DBMS_OUTPUT.PUT_LINE('Error: ' || SQLCODE || ' - ' || SQLERRM);
+END;
+/

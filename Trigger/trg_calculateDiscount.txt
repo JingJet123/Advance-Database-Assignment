@@ -1,0 +1,41 @@
+CREATE OR REPLACE TRIGGER validate_discount
+BEFORE UPDATE ON Orders
+FOR EACH ROW
+--FOLLOWS calculate_order_totals
+DECLARE
+    v_status Discount.DiscountStatus%TYPE;
+    v_min_spent Discount.MinimumSpent%TYPE;
+    v_max_cap Discount.MaximumCap%TYPE;
+    v_total_price Orders.TotalPrice%TYPE;
+    v_discount_amt Orders.DiscountAmount%TYPE;
+    v_dc_pct Discount.DiscountPercentage%TYPE;
+BEGIN
+    
+    DBMS_OUTPUT.PUT_LINE('==Discount Validation==');
+    
+    
+    SELECT DiscountStatus, MinimumSpent, MaximumCap, DiscountPercentage
+    INTO v_status, v_min_spent, v_max_cap, v_dc_pct
+    FROM Discount
+    WHERE DiscountID = :NEW.DiscountID;
+    
+    v_discount_amt := :NEW.TotalPrice * v_dc_pct;
+
+    IF v_status = 'Unavailable' THEN
+        RAISE_APPLICATION_ERROR(-20002, 'Discount is unavailable');
+    END IF;
+
+    IF :NEW.TotalPrice < v_min_spent THEN
+        v_discount_amt := 0;
+    END IF;
+
+    IF v_max_cap IS NOT NULL AND v_discount_amt > v_max_cap THEN
+        DBMS_OUTPUT.PUT_LINE('==Discount Max Cap Reached==');
+        v_discount_amt := v_max_cap;
+        --UPDATE Orders
+        --SET DiscountAmount = v_max_cap
+        --WHERE OrderID = :NEW.OrderID;
+    END IF;
+    :NEW.DiscountAmount := v_discount_amt;
+END;
+/

@@ -1,0 +1,32 @@
+CREATE OR REPLACE TRIGGER Update_Delivery_trigger
+BEFORE UPDATE ON Delivery
+FOR EACH ROW
+BEGIN
+  IF :NEW.DeliveryStatus = 'Pending' OR
+     :NEW.DeliveryStatus = 'Delivering' OR
+     :NEW.DeliveryStatus = 'Delivered'
+  THEN
+    IF :NEW.DeliveryStatus = 'Pending'
+    THEN
+      :NEW.DepartureDate := null;
+      :NEW.ArrivedDate := null;
+    ELSIF :NEW.DeliveryStatus = 'Delivering'
+    THEN
+      :NEW.DepartureDate := SYSDATE;
+      :NEW.ArrivedDate := null;
+    ELSIF :NEW.DeliveryStatus = 'Delivered'
+    THEN
+      IF :NEW.ArrivedDate <= :OLD.DepartureDate AND :NEW.ArrivedDate IS NOT NULL
+      THEN
+        :NEW.ArrivedDate := SYSDATE;
+      ELSE
+                DBMS_OUTPUT.PUT_LINE('Old Departure Date: ' || :OLD.DepartureDate);
+        DBMS_OUTPUT.PUT_LINE('New Arrived Date: ' || :NEW.ArrivedDate);
+        RAISE_APPLICATION_ERROR(-20002, 'Invalid Arrived Date');
+      END IF;
+    END IF;
+  ELSE
+    RAISE_APPLICATION_ERROR(-20002, 'Invalid Delivery Status');
+  END IF;
+END;
+/

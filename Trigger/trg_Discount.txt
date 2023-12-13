@@ -1,0 +1,35 @@
+CREATE OR REPLACE TRIGGER check_discount
+BEFORE INSERT OR UPDATE ON Discount
+FOR EACH ROW
+DECLARE
+    discount_status varchar2(15);
+    minimum_spent number(5,2);
+    discount_percentage number(3,2);
+    maximum_cap number(4,2);
+BEGIN
+    discount_status := :NEW.DiscountStatus;
+    minimum_spent := :NEW.MinimumSpent;
+    discount_percentage := :NEW.DiscountPercentage;
+    maximum_cap := :NEW.MaximumCap;
+    
+    -- Check DiscountStatus
+    IF discount_status NOT IN ('Available', 'Unavailable') THEN
+        raise_application_error(-20001, 'Discount status can only be Available or Unavailable.');
+    END IF;
+    
+    -- Check MinimumSpent
+    IF minimum_spent <= 0 THEN
+        raise_application_error(-20002, 'Minimum spent must be greater than 0.');
+    END IF;
+    
+    -- Check DiscountPercentage
+    IF discount_percentage > 0.5 THEN
+        raise_application_error(-20003, 'Discount percentage cannot exceed 50%.');
+    END IF;
+    
+    -- Check MaximumCap
+    IF maximum_cap < 1 THEN
+        raise_application_error(-20004, 'Maximum cap cannot be less than 1.');
+    END IF;
+END;
+/

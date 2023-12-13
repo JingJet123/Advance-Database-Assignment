@@ -1,0 +1,42 @@
+CREATE OR REPLACE PROCEDURE prc_ApprovePayment(
+  p_order_id IN VARCHAR2,
+  v_payment_method Payment.PaymentMethod%TYPE
+) AS
+  v_payment_id Payment.PaymentID%TYPE;
+  v_delivery_id Delivery.DeliveryID%TYPE;
+  v_delivery_status Delivery.DeliveryStatus%TYPE;
+BEGIN
+  -- Get the delivery status
+  SELECT DeliveryStatus INTO v_delivery_status FROM Delivery WHERE DeliveryID = (SELECT DeliveryID FROM Orders WHERE OrderID = p_order_id);
+  
+  -- Only change delivery status if it is "Pending"
+  IF v_delivery_status = 'Pending' THEN
+  
+    -- Get Order Payment ID
+    SELECT PaymentID INTO v_payment_id FROM Orders WHERE OrderID = p_order_id;
+    
+    -- Insert a new payment record
+    UPDATE Payment
+    SET PaymentMethod = v_payment_method, PaymentDate = SYSDATE
+    WHERE PaymentID = v_payment_id;
+
+    
+    -- Update the delivery status to "Delivering"
+    UPDATE Delivery 
+    SET DeliveryStatus = 'Delivering', DepartureDate = SYSDATE
+    WHERE DeliveryID = (SELECT DeliveryID 
+                        FROM Orders WHERE OrderID = p_order_id);
+
+    -- Update the order status to "Paid"
+    UPDATE Orders SET OrderStatus = 'Paid' WHERE OrderID = p_order_id;
+    --(SELECT OrderID FROM Orders WHERE OrderID = p_order_id);
+    
+    COMMIT;
+    
+  ELSIF v_delivery_status = 'Delivering' THEN 
+    -- Prompt user that payment has already been approved
+    DBMS_OUTPUT.PUT_LINE('Payment has already been approved for this order Operation aborted.');
+  END IF;
+  
+END;
+/
